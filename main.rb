@@ -15,6 +15,25 @@ class User
   property :email, Text, :required => true, :unique =>true
   property :password, Text
   property :created, DateTime
+  has n, :posts
+end
+
+class Post
+  include DataMapper::Resource
+  property :id, Serial
+  property :title, Text, :required => true, :unique =>true
+  property :body, Text, :required => true, :unique =>true
+  property :created_at, DateTime
+  belongs_to :user
+  has n, :comments
+end
+class Comment
+  include DataMapper::Resource
+  property :id, Serial
+  property :name, Text, :required => true, :unique =>true
+  property :body, Text, :required => true, :unique =>true
+  property :created_at, DateTime
+  belongs_to :post
 end
 
 DataMapper.finalize.auto_upgrade!
@@ -22,7 +41,12 @@ DataMapper.finalize.auto_upgrade!
 get '/' do
     erb :index
 end
+ get '/test' do
+  User.create(:username=>'test name',:email=>'email@yahoo.com',:password => 'test pass')
+  @usertest = User.first(:email => 'email@yahoo.com')
 
+  erb :test
+ end
 post '/register' do
 	
   User.create( 
@@ -30,16 +54,19 @@ post '/register' do
   	:email => params[:email], 
   	:password => params[:password],
     :created => Time.now)
-  	if User.create
-  	flash[:create] = "User created"
-  else
-  	flash[:error] = "User not created"
-  end
-    redirect '/register'
+  user = User.first(:email => params[:email])
+  if user.nil? 
+  flash[:error] = "User Not Created"
+  redirect '/signup'
+ else
+   redirect '/dashboard'
+end
+
+    #redirect '/register'
 end
 
 get '/dashboard' do
-  erb :profile
+  erb :dashboard
 end
 
 get '/signup' do
@@ -51,11 +78,12 @@ end
 
 post '/login' do
    user = User.first(:username => params[:username])
-   if user[:password] == user[:username]
+   if !user.nil? && user[:password] == params[:password]
     session[:username] == user[:username]
       redirect '/dashboard'
   else
-    redirect '/'
+    flash[:error] = "User Name and passwod Not in existence"
+    redirect '/login'
   end
 end
 get '/logout' do
