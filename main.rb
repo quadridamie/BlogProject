@@ -4,9 +4,9 @@ require 'sinatra/flash'
 
 DataMapper::setup(:default, "sqlite3://#{Dir.pwd}/blogger.db")
 
-configure do
+
 enable :session
-end
+
 
 class User
   include DataMapper::Resource
@@ -21,32 +21,42 @@ end
 class Post
   include DataMapper::Resource
   property :id, Serial
-  property :title, Text, :required => true, :unique =>true
-  property :body, Text, :required => true, :unique =>true
-  property :created_at, DateTime
+  property :title, Text, :required => true
+  property :body, Text, :required => true 
+  property :created, DateTime
   belongs_to :user
   has n, :comments
 end
+
 class Comment
   include DataMapper::Resource
   property :id, Serial
-  property :name, Text, :required => true, :unique =>true
-  property :body, Text, :required => true, :unique =>true
-  property :created_at, DateTime
+  property :name, Text, :required => true 
+  property :body, Text, :required => true
+  property :created, DateTime
   belongs_to :post
 end
 
-DataMapper.finalize.auto_upgrade!
+DataMapper.finalize
+DataMapper.auto_upgrade!
+
 
 get '/' do
     erb :index
 end
- get '/test' do
+=begin
+  
+rescue Exception => e
+  
+end
+get '/test' do
   User.create(:username=>'test name',:email=>'email@yahoo.com',:password => 'test pass')
   @usertest = User.first(:email => 'email@yahoo.com')
 
   erb :test
  end
+=end
+
 post '/register' do
 	
   User.create( 
@@ -54,6 +64,7 @@ post '/register' do
   	:email => params[:email], 
   	:password => params[:password],
     :created => Time.now)
+
   user = User.first(:email => params[:email])
   if user.nil? 
   flash[:error] = "User Not Created"
@@ -68,7 +79,30 @@ end
 get '/dashboard' do
   erb :dashboard
 end
+get'/editor' do
+erb :editor
+end
 
+post '/editor' do
+   #  if session[:username].nil?
+   #    halt "Access denied, please <a href='/login'>login</a>."
+   # end
+  Post.create(
+    :title => params[:title],
+    :body => params[:body],
+    :user_id => 1,
+    :created => Time.now
+   )
+    redirect '/dashboard'
+end
+post '/comments'do
+    Comment.create(
+      :name => params[:name],
+      :body => params[:body],
+      :Created => Time.now
+      )
+
+end
 get '/signup' do
   erb :signup
 end
@@ -79,7 +113,7 @@ end
 post '/login' do
    user = User.first(:username => params[:username])
    if !user.nil? && user[:password] == params[:password]
-    session[:username] == user[:username]
+    session[:username] = params[:username]
       redirect '/dashboard'
   else
     flash[:error] = "User Name and passwod Not in existence"
